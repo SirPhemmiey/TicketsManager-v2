@@ -1,11 +1,12 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import Admin from '../models/adminModel';
+import User from '../models/userModel';
 
 exports.signUp = async (req, res) => {
     let { username, password } = req.body;
     if (username !== '' && password !== '') {
-        res.json({
+        return res.json({
             success: false,
             message: "Fields cannot be empty"
         });
@@ -23,6 +24,12 @@ exports.signUp = async (req, res) => {
             token: token
         });
     }
+    else {
+        res.json({
+            success: false,
+            message: 'An error occured'
+        });
+    }
 };
 
 exports.signIn = async (req, res) => {
@@ -34,25 +41,88 @@ exports.signIn = async (req, res) => {
         });
     }
     const admin = Admin.findOne({username: username.toLowerCase()});
-    if (!admin) {
-        res.json({
-            message: 'Login credentials not found',
-            success: false
-        });
-    }
-    if (bcrypt.compareSync(password.toLowerCase(), admin.password)) {
+    if (admin)  {
         req.body = undefined;
-        const token = await jwt.sign(req.body, process.env.JWT_SECRET);
-        res.status(200).json({
-            message: 'Login successful',
-            success: true,
-            token: token
-        });
-    }
-    else {
-        res.json({
-            message: 'Invalid Credentials!',
-            success: false
-        });
+        let signData = {
+            _id: admin._id,
+            firstName: admin.username,
+        };
+        // const token = jwt.sign(signData, process.env.JWT_SECRET);
+        const token = jwt.sign({
+            _id: admin._id,
+            firstName: admin.username,
+        }, "Algorithm...221");
+        if (bcrypt.compareSync(password, admin.password)) {
+            res.status(200).json({
+                message: 'Successful',
+                id: signData._id,
+                token: token,
+                firstName: signData.firstName,
+                success: true
+            });
+        }
+        else {
+            res.json({
+                message: 'Credentials not found!',
+                success: false
+            });
+        }
     }
 };
+
+exports.allUsers = async (req, res) => {
+    const user = await User.find();
+    if (user) {
+        res.status(200).json({
+            user
+        });
+    }
+}
+
+exports.allTickets = async (req, res) => {
+    let tickets = await Ticket.find();
+    console.log(tickets);
+    const authorizationToken = req.headers['authorization'].split(" ")[1];
+    console.log(authorizationToken);
+    //if the header is provided
+    if (authorizationToken) {
+        const token = jwt.verify(authorizationToken, 'Algorithm...212');
+        let user = await User.findOne({_id: token._id});
+        //if user is found
+        if (user) {
+            if (tickets) {
+                //ok
+                res.status(200).json({
+                    success: true,
+                    tickets,
+                });
+            }
+            else {
+                //internal server error
+                res.status(500).json({
+                    success: false,
+                    message: "An error occured"
+                });
+            }
+        }
+        //unauth access
+        else {
+            res.status(401).json({
+                success: false,
+                message: 'Unauthorized Access'
+            });
+        }
+    }
+    //auth header not provided
+    else {
+        res.status(401).json({
+            success: false,
+            message: 'Unauthorized Access'
+        });
+    }
+
+}
+
+exports.respondTicket = async (req, res) => {
+
+}
