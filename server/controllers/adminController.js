@@ -5,53 +5,58 @@ import User from '../models/userModel';
 
 exports.signUp = async (req, res) => {
     let { username, password } = req.body;
-    if (username !== '' && password !== '') {
+    if (username == '' && password == '') {
         return res.json({
             success: false,
             message: "Fields cannot be empty"
         });
     }
     //auto-generate a salt and hash
-    req.body.password = bcrypt.hashSync(password, 10);
+    req.body.password = bcrypt.hashSync(password.toLowerCase(), 10);
     req.body.username = username.toLowerCase();
-    const admin = await Admin.create(req.body);
-    if (admin) {
-        req.body = undefined;
-        const token = jwt.sign(req.body, process.env.JWT_SECRET);
-        res.json({
-            message: 'Successful',
-            success: true,
-            token: token
-        });
-    }
-    else {
-        res.json({
+
+    //check if username exists
+    let checkUsername = await Admin.findOne({ username: username});
+    if (checkUsername) {
+       return res.json({
             success: false,
-            message: 'An error occured'
+            message: 'Username already exist'
         });
     }
+        const admin = await Admin.create(req.body);
+        if (admin) {
+            req.body = undefined;
+            res.json({
+                message: 'Successful',
+                success: true,
+            });
+        }
+        else {
+            res.json({
+                success: false,
+                message: 'An error occured'
+            });
+        }
 };
 
 exports.signIn = async (req, res) => {
     let { username, password } = req.body;
     if (!req.body) {
-        res.json({
+       return res.json({
             message: 'All fields are compulsory',
             success: false
         });
     }
-    const admin = Admin.findOne({username: username.toLowerCase()});
+    const admin = await Admin.findOne({username: username.toLowerCase()});
+    //res.json(JSON.stringify(password));
     if (admin)  {
-        req.body = undefined;
+        //req.body = undefined;
         let signData = {
             _id: admin._id,
             firstName: admin.username,
         };
         // const token = jwt.sign(signData, process.env.JWT_SECRET);
-        const token = jwt.sign({
-            _id: admin._id,
-            firstName: admin.username,
-        }, "Algorithm...221");
+        const token = jwt.sign(signData, "Algorithm...221");
         if (bcrypt.compareSync(password, admin.password)) {
             res.status(200).json({
                 message: 'Successful',
@@ -68,9 +73,35 @@ exports.signIn = async (req, res) => {
             });
         }
     }
+    else {
+        res.json({
+            message: 'Credentials not found!',
+            success: false
+        });
+    }
 };
 
 exports.allUsers = async (req, res) => {
+    const authorizationToken = req.headers['authorization'].split(" ")[1];
+    if (authorizationToken) {
+        try {
+            const token = jwt.verify(authorizationToken, 'Algorithm...221');
+            let users = await User.find();
+            if(users) {
+                res.json({
+                    success: true,
+                    users: users
+                });
+            }
+
+        }
+        catch(err) {
+            res.json({
+                success: false,
+                message: err.message
+            });
+        }
+    }
     const user = await User.find();
     if (user) {
         res.status(200).json({

@@ -1,7 +1,7 @@
 import Ticket from '../models/ticketModel';
+import User from '../models/userModel';
 import Response from '../models/responseModel';
 import jwt from 'jsonwebtoken';
-
 
 
 exports.allTickets = async (req, res) => {
@@ -11,6 +11,49 @@ exports.allTickets = async (req, res) => {
         try {
             const token = jwt.verify(authorizationToken, 'Algorithm...221');
             let tickets = await Ticket.find({user: token._id});
+            //if tickets is found
+            if (tickets) {
+                //ok
+                res.status(200).json({
+                    success: true,
+                    tickets: tickets
+                });
+            }
+            else {
+                //internal server error
+                res.status(500).json({
+                    success: false,
+                    message: "An error occured"
+                });
+            }
+        }
+        catch(err) {
+            console.log(err.message);
+            res.status(401).json({
+                success: false,
+                message: 'Unauthorized Access'
+            });
+        }
+
+    }
+    //auth header not provided
+    else {
+        res.status(401).json({
+            success: false,
+            message: 'Unauthorized Access'
+        });
+    }
+
+}
+
+
+exports.AdminAllTickets = async (req, res) => {
+    const authorizationToken = req.headers['authorization'].split(" ")[1];
+    //if the header is provided
+    if (authorizationToken) {
+        try {
+            const token = jwt.verify(authorizationToken, 'Algorithm...221');
+            let tickets = await Ticket.find().populate('user', 'firstName');
             //if tickets is found
             if (tickets) {
                 //ok
@@ -168,11 +211,13 @@ exports.submitTicket =  async (req, res) => {
          const ticket = await Ticket.create(req.body);
          if (ticket) {
              req.body = undefined;
-             //ok
-             res.status(200).json({
-                 message: 'Ticket submitted successfully',
-                 success: true
-             });
+            //const user = await User.findByIdAndUpdate(token._id, {ticket: ticket._id});
+          //   if (user) {
+                res.status(200).json({
+                    message: 'Ticket submitted successfully',
+                    success: true
+                });
+             //}
          } else {
              //bad request
              res.status(400).json({
