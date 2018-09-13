@@ -10,7 +10,7 @@ exports.allTickets = async (req, res) => {
     if (authorizationToken) {
         try {
             const token = jwt.verify(authorizationToken, 'Algorithm...221');
-            let tickets = await Ticket.find({user: token._id});
+            let tickets = await Ticket.find({user: token._id}).populate('response');
             //if tickets is found
             if (tickets) {
                 //ok
@@ -28,7 +28,6 @@ exports.allTickets = async (req, res) => {
             }
         }
         catch(err) {
-            console.log(err.message);
             res.status(401).json({
                 success: false,
                 message: 'Unauthorized Access'
@@ -53,7 +52,7 @@ exports.AdminAllTickets = async (req, res) => {
     if (authorizationToken) {
         try {
             const token = jwt.verify(authorizationToken, 'Algorithm...221');
-            let tickets = await Ticket.find().populate('user', 'firstName');
+            let tickets = await Ticket.find({status : 'open'}).populate('user', 'firstName');
             //if tickets is found
             if (tickets) {
                 //ok
@@ -62,6 +61,12 @@ exports.AdminAllTickets = async (req, res) => {
                     tickets: tickets
                 });
             }
+            // else if (!tickets.length) {
+            //     res.json({
+            //         success: false,
+            //         message: 'Empty'
+            //     });
+            // }
             else {
                 //internal server error
                 res.status(500).json({
@@ -89,45 +94,62 @@ exports.AdminAllTickets = async (req, res) => {
 
 }
 
-
-// exports.processTicket = async (req, res) => {
-//     let ticket = await Ticket.findById()
-// }
 exports.respondTicket = async (req, res) => {
-    let {
-        ticketId,
-        response
-    } = req.body;
-    // const findTicket = await Ticket.findById(ticketId, (err, ticket) => {
-    //     if (err) {
-    //         res.json({
-    //             message: 'Could not find ticket',
-    //             success: false
-    //         });
-    //     }
-    //     const responseTicket = await Response.create({response: response});
-    //     if (responseTicket) {
+    const authorizationToken = req.headers['authorization'].split(" ")[1];
+    if (authorizationToken) {
+        try {
+            const token = jwt.verify(authorizationToken, 'Algorithm...221');
+            if (token) {
+                const ticketID = req.params.ticketID;
+                let doc = {
+                    ticket: ticketID,
+                    response: req.body.response
+                }
 
-    //     }
-    // });
-    const findTicket = await Ticket.findById(ticketId);
-    if (findTicket) {
-        const responseTicket = await Response.create({
-            response: response,
-            ticket: ticketId
-        });
-        if (responseTicket) {
-            //ok
-            res.status(200).json({
-                success: true,
-                message: 'Successful'
+                const responseQuery = await Response.create(doc);
+                if (responseQuery) {
+                    let query = {
+                        status: 'closed',
+                        response: responseQuery._id
+                    };
+                    const updateTicket = await Ticket.findOneAndUpdate({_id: ticketID}, query)
+                    if (updateTicket) {
+                        res.status(200).json({
+                            success: true,
+                            message: "Success"
+                        });
+                    }
+                    else {
+                        res.json({
+                            success: false,
+                            message: "Could not update ticket"
+                        });
+                    }
+                }
+                else {
+                    res.json({
+                        success: false,
+                        message: "Could not create response"
+                    });
+                }
+            }
+            else {
+                res.status(401).json({
+                    success: false,
+                    message: 'Invalid token'
+                });
+            }
+        } catch(err) {
+            res.status(500).json({
+                success: false,
+                message: 'Could not validate token'
             });
         }
-    } else {
-        //bad request
-        res.status(400).json({
+    }
+    else {
+        res.status(401).json({
             success: false,
-            message: 'Could not find ticket'
+            message: "Unauthorized Access"
         });
     }
 }
@@ -208,6 +230,7 @@ exports.submitTicket =  async (req, res) => {
              });
          }
        try {
+           req.body.status = 'open';
          const ticket = await Ticket.create(req.body);
          if (ticket) {
              req.body = undefined;
