@@ -1,3 +1,4 @@
+require('dotenv').config();
 import Ticket from '../models/ticketModel';
 import User from '../models/userModel';
 import Response from '../models/responseModel';
@@ -9,7 +10,7 @@ exports.allTickets = async (req, res) => {
     //if the header is provided
     if (authorizationToken) {
         try {
-            const token = jwt.verify(authorizationToken, 'Algorithm...221');
+            const token = jwt.verify(authorizationToken, process.env.JWT_SECRET);
             let tickets = await Ticket.find({user: token._id}).populate('response');
             //if tickets is found
             if (tickets) {
@@ -51,7 +52,7 @@ exports.AdminAllTickets = async (req, res) => {
     //if the header is provided
     if (authorizationToken) {
         try {
-            const token = jwt.verify(authorizationToken, 'Algorithm...221');
+            const token = jwt.verify(authorizationToken, process.env.JWT_SECRET);
             let tickets = await Ticket.find({status : 'open'}).populate('user', 'firstName');
             //if tickets is found
             if (tickets) {
@@ -98,7 +99,7 @@ exports.respondTicket = async (req, res) => {
     const authorizationToken = req.headers['authorization'].split(" ")[1];
     if (authorizationToken) {
         try {
-            const token = jwt.verify(authorizationToken, 'Algorithm...221');
+            const token = jwt.verify(authorizationToken, process.env.JWT_SECRET);
             if (token) {
                 const ticketID = req.params.ticketID;
                 let doc = {
@@ -157,7 +158,7 @@ exports.respondTicket = async (req, res) => {
 exports.editTicket = async (req, res) => {
     const authorizationToken = req.headers['authorization'].split(" ")[1];
     try {
-        const token = jwt.verify(authorizationToken, 'Algorithm...221');
+        const token = jwt.verify(authorizationToken, process.env.JWT_SECRET);
         if (token) {
             const query = {
                 subject: req.body.subject,
@@ -192,7 +193,7 @@ exports.editTicket = async (req, res) => {
 exports.getTicketInfo = async (req, res) => {
     const authorizationToken = req.headers['authorization'].split(" ")[1];
     try {
-        const token = jwt.verify(authorizationToken, 'Algorithm...221');
+        const token = jwt.verify(authorizationToken, process.env.JWT_SECRET);
         if (token) {
             const ticket = await Ticket.findById(req.params.ticketID);
             if (ticket) {
@@ -220,7 +221,7 @@ exports.getTicketInfo = async (req, res) => {
 exports.submitTicket =  async (req, res) => {
     const authorizationToken = req.headers['authorization'].split(" ")[1];
     try {
-        const token = jwt.verify(authorizationToken, 'Algorithm...221');
+        const token = jwt.verify(authorizationToken, process.env.JWT_SECRET);
         if (token) {
             req.body.user = token._id;
              if (!req.body) {

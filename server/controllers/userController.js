@@ -1,4 +1,4 @@
-require('dotenv').config()
+require('dotenv').config();
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import User from '../models/userModel';
@@ -58,13 +58,12 @@ exports.signIn = async (req, res) => {
             lastName: user.lastName,
             email: email
         };
-        // const token = jwt.sign(signData, process.env.JWT_SECRET);
         const token = jwt.sign({
             _id: user._id,
             firstName: user.firstName,
             lastName: user.lastName,
             email: email
-        }, "Algorithm...221");
+        },  process.env.JWT_SECRET);
         if (bcrypt.compareSync(password, user.password)) {
             res.status(200).json({
                 message: 'Successful',

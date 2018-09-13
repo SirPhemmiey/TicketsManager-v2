@@ -1,3 +1,4 @@
+require('dotenv').config();
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import Admin from '../models/adminModel';
@@ -56,7 +57,7 @@ exports.signIn = async (req, res) => {
             firstName: admin.username,
         };
         // const token = jwt.sign(signData, process.env.JWT_SECRET);
-        const token = jwt.sign(signData, "Algorithm...221");
+        const token = jwt.sign(signData, process.env.JWT_SECRET);
         if (bcrypt.compareSync(password, admin.password)) {
             res.status(200).json({
                 message: 'Successful',
@@ -85,7 +86,7 @@ exports.allUsers = async (req, res) => {
     const authorizationToken = req.headers['authorization'].split(" ")[1];
     if (authorizationToken) {
         try {
-            const token = jwt.verify(authorizationToken, 'Algorithm...221');
+            const token = jwt.verify(authorizationToken, process.env.JWT_SECRET);
             let users = await User.find();
             if(users) {
                 res.json({
@@ -117,7 +118,7 @@ exports.allTickets = async (req, res) => {
     console.log(authorizationToken);
     //if the header is provided
     if (authorizationToken) {
-        const token = jwt.verify(authorizationToken, 'Algorithm...212');
+        const token = jwt.verify(authorizationToken, process.env.JWT_SECRET);
         let user = await User.findOne({_id: token._id});
         //if user is found
         if (user) {
